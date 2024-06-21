@@ -49,7 +49,7 @@ dependencies {
         testFramework(TestFrameworkType.Platform)
     }
 
-    implementation("com.google.code.gson:gson:2.9.1")
+    implementation("com.google.code.gson:gson:2.11.0")
     implementation("org.jetbrains:annotations:24.1.0")
 
     testImplementation("com.intellij.remoterobot:remote-robot:0.11.23")
