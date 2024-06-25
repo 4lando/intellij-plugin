@@ -1,12 +1,12 @@
-package com.github.aaronfeledy.landointellijplugin.actions
+package dev._4lando.intellij.actions
 
-import com.github.aaronfeledy.landointellijplugin.LandoExec
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages
+import dev._4lando.intellij.LandoExec
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader

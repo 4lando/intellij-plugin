@@ -1,12 +1,12 @@
-package com.github.aaronfeledy.landointellijplugin.config
+package dev._4lando.intellij.config
 
-import com.github.aaronfeledy.landointellijplugin.LandoBundle
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.fileTypes.ex.FileTypeIdentifiableByVirtualFile
 import com.intellij.openapi.vfs.VirtualFile
+import dev._4lando.intellij.LandoBundle
 import icons.LandoIcons
-import org.jetbrains.yaml.YAMLLanguage
 import javax.swing.Icon
+import org.jetbrains.yaml.YAMLLanguage
 
 /**
  * This class represents the file type for Landofile (.lando.yml) configuration files.

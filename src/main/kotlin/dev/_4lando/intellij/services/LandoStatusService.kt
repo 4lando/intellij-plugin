@@ -1,8 +1,5 @@
-package com.github.aaronfeledy.landointellijplugin.services
+package dev._4lando.intellij.services
 
-import com.github.aaronfeledy.landointellijplugin.LandoExec
-import com.github.aaronfeledy.landointellijplugin.listeners.LandoStatusListener
-import com.github.aaronfeledy.landointellijplugin.ui.console.JeditermConsoleView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.intellij.openapi.Disposable
@@ -12,8 +9,11 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.util.messages.Topic
 import com.pty4j.PtyProcessBuilder
-import kotlinx.coroutines.sync.Mutex
+import dev._4lando.intellij.LandoExec
+import dev._4lando.intellij.listeners.LandoStatusListener
+import dev._4lando.intellij.ui.console.JeditermConsoleView
 import java.util.*
+import kotlinx.coroutines.sync.Mutex
 
 @Service()
 class LandoStatusService() : Disposable {

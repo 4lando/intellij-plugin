@@ -1,11 +1,12 @@
-package com.github.aaronfeledy.landointellijplugin.ui.console
+package dev._4lando.intellij.ui.console
 
 import com.jediterm.terminal.TtyConnector
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 class LandoTtyConnector(private val process: Process,
-                        private val consoleView: JeditermConsoleView) : TtyConnector {
+                        private val consoleView: JeditermConsoleView
+) : TtyConnector {
 
     var charset: Charset = StandardCharsets.UTF_8
     var localEcho: Boolean = false

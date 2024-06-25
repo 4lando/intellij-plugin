@@ -1,7 +1,5 @@
-package com.github.aaronfeledy.landointellijplugin.ui.widget
+package dev._4lando.intellij.ui.widget
 
-import com.github.aaronfeledy.landointellijplugin.listeners.LandoAppServiceListener
-import com.github.aaronfeledy.landointellijplugin.services.LandoAppService
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -9,6 +7,8 @@ import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
 import com.intellij.openapi.wm.WindowManager
+import dev._4lando.intellij.listeners.LandoAppServiceListener
+import dev._4lando.intellij.services.LandoAppService
 
 const val ID: String = LandoStatusWidget.ID
 

@@ -1,4 +1,4 @@
-package com.github.aaronfeledy.landointellijplugin.ui.console
+package dev._4lando.intellij.ui.console
 
 import com.intellij.execution.filters.Filter
 import com.intellij.execution.filters.HyperlinkInfo
@@ -17,13 +17,13 @@ import com.intellij.terminal.JBTerminalWidget
 import com.jediterm.terminal.*
 import com.jediterm.terminal.emulator.JediEmulator
 import com.jediterm.terminal.model.JediTerminal
-import org.apache.commons.io.input.buffer.CircularByteBuffer
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.Reader
 import java.nio.charset.Charset
 import javax.swing.JComponent
 import kotlin.math.min
+import org.apache.commons.io.input.buffer.CircularByteBuffer
 
 private const val BUFFER_SIZE = 100000
 

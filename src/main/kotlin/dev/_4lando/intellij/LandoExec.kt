@@ -1,10 +1,10 @@
-package com.github.aaronfeledy.landointellijplugin
+package dev._4lando.intellij
 
-import com.github.aaronfeledy.landointellijplugin.services.LandoProjectService
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.ui.ConsoleViewContentType
-import com.github.aaronfeledy.landointellijplugin.ui.console.JeditermConsoleView
 import com.intellij.openapi.project.Project
+import dev._4lando.intellij.services.LandoProjectService
+import dev._4lando.intellij.ui.console.JeditermConsoleView
 import java.io.File
 import java.io.OutputStream
 

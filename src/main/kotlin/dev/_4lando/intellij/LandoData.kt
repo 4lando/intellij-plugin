@@ -1,4 +1,4 @@
-package com.github.aaronfeledy.landointellijplugin
+package dev._4lando.intellij
 
 /**
  * Data class representing the service data for a Lando application.
