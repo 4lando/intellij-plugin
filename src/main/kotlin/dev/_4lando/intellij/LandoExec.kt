@@ -1,12 +1,12 @@
 package dev._4lando.intellij
 
 import com.intellij.execution.process.ProcessHandler
-import com.intellij.execution.ui.ConsoleViewContentType
+import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.openapi.project.Project
 import dev._4lando.intellij.services.LandoProjectService
 import dev._4lando.intellij.ui.console.JeditermConsoleView
-import java.io.File
-import java.io.OutputStream
+import com.pty4j.PtyProcessBuilder
+import java.util.*
 
 /**
  * Class for executing Lando commands.
@@ -17,7 +17,10 @@ class LandoExec(private val command: String) {
 
     private var directory: String = ""
 
-    private var format: String = ""
+    /**
+     * The --format parameter for the Lando command.
+     */
+    private var format: Format? = null
 
     private var attachToConsole: Boolean = true
 
@@ -39,7 +42,7 @@ class LandoExec(private val command: String) {
      * @return The LandoExec instance.
      */
     fun format(format: Format): LandoExec {
-        this.format = format.format
+        this.format = format
         return this
     }
 
@@ -57,11 +60,11 @@ class LandoExec(private val command: String) {
      * @return The ProcessHandler for the process running the Lando command.
      */
     fun run(): ProcessHandler {
-        // Create a new process builder with the Lando binary and the command
-        val processBuilder = ProcessBuilder(landoBin, command)
+        var cmd = arrayOf(landoBin, command)
 
-        // Get the LandoAppService instance
-        val appService = LandoAppService.getInstance()
+        val processBuilder = PtyProcessBuilder()
+        processBuilder.setRedirectErrorStream(true)
+        processBuilder.setConsole(true)
 
         // Default to the project root as working directory if none is set
         if (directory.isEmpty() && project != null) {
@@ -69,78 +72,42 @@ class LandoExec(private val command: String) {
         } else if (directory.isEmpty()) {
             directory = System.getProperty("user.dir")
         }
-        // Set the directory for the process builder
-        processBuilder.directory(File(directory))
+        processBuilder.setDirectory(directory)
 
         // If a format is set, add it to the command
-        if (format.isNotEmpty()) {
-            processBuilder.command().add(format)
+        if (format != null) {
+            cmd += format.toString()
         }
 
         // Start the process
-        val process = processBuilder.start()
+        val process = processBuilder.setCommand(cmd).start()
 
         // Attach process to console view to display output
         var landoConsoleView: JeditermConsoleView? = null
-        if (attachToConsole) {
+        if (attachToConsole && project != null) {
             // Create a new console view with the process
-            landoConsoleView = JeditermConsoleView(appService.thisProject.project, process)
+            landoConsoleView = JeditermConsoleView(project!!)
+            landoConsoleView.connectToProcess(process)
         }
 
-        // Create a new process handler
-        val processHandler = object : ProcessHandler() {
-            // Method to destroy the process
-            override fun destroyProcessImpl() {
-                process.destroy()
-            }
-
-            // Method to detach the process
-            override fun detachProcessImpl() {
-                destroyProcessImpl()
-            }
-
-            // Method to check if detach is default
-            override fun detachIsDefault(): Boolean = false
-
-            // Method to get the process input
-            override fun getProcessInput(): OutputStream? = null
-
-            // Method to start the notification
-            override fun startNotify() {
-                super.startNotify()
-                if (landoConsoleView == null) {
-                    return
-                }
-                // Start a new thread to read the process output and print it to the console view
-                Thread {
-                    val reader = process.inputStream.bufferedReader()
-                    reader.useLines { lines ->
-                        lines.forEach { line ->
-                            // Parse the line to remove any ANSI escape codes
-                            val formattedLine = AnsiEscapeCodeParser.parse(line)
-                            // Print the formatted line to the console view
-                            landoConsoleView.print(formattedLine, ConsoleViewContentType.NORMAL_OUTPUT)
-                        }
-                    }
-                }.start()
-            }
+        val scanner = Scanner(process.inputStream).useDelimiter("\\n")
+        while (scanner.hasNext()) {
+            val line = scanner.next()
+            landoConsoleView?.output((line + "\n").toByteArray())
         }
 
-        // Attach the process handler to the console view
-        landoConsoleView?.attachToProcess(processHandler)
-        // Start the process handler notification
-        processHandler.startNotify()
-
-        // Return the process handler
-        return processHandler
+        // Create a new process handler from the process
+        return KillableColoredProcessHandler(process, cmd.joinToString(" "), Charsets.UTF_8)
     }
 
     /**
      * Companion object for LandoExec class.
      */
     companion object {
+        const val PROCESS_TIMEOUT = 30000L
+
         /**
-         * Enum for Lando command formats.
+         * Enum for the Lando --format parameter values.
          */
         enum class Format(val format: String) {
             JSON("--format json"),

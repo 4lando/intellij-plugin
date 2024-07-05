@@ -7,16 +7,16 @@ import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
 import com.intellij.openapi.wm.WindowManager
-import dev._4lando.intellij.listeners.LandoAppServiceListener
-import dev._4lando.intellij.services.LandoAppService
+import dev._4lando.intellij.listeners.LandoStatusListener
+import dev._4lando.intellij.services.LandoStatusService
 
 const val ID: String = LandoStatusWidget.ID
 
 class LandoStatusWidgetFactory : StatusBarWidgetFactory {
     init {
         ApplicationManager.getApplication().messageBus.connect().subscribe(
-            LandoAppService.TOPIC,
-            object : LandoAppServiceListener {
+            LandoStatusService.TOPIC,
+            object : LandoStatusListener {
                 override fun statusChanged() {
                     for (project in ProjectManager.getInstance().openProjects) {
                         val statusBar = WindowManager.getInstance().getStatusBar(project)

@@ -39,7 +39,7 @@
     </actions>
 
     <applicationListeners>
-        <listener class="dev._4lando.intellij.listeners.LandoManagerListener"
+        <listener class="dev._4lando.intellij.listeners.LandoProjectManagerListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </applicationListeners>
 </idea-plugin>

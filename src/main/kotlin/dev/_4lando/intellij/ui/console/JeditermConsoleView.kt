@@ -2,38 +2,37 @@ package dev._4lando.intellij.ui.console
 
 import com.intellij.execution.filters.Filter
 import com.intellij.execution.filters.HyperlinkInfo
+import com.intellij.execution.process.AnsiEscapeDecoder
 import com.intellij.execution.process.ProcessHandler
+import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
-import com.intellij.icons.AllIcons
-import com.intellij.idea.ActionsBundle
-import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.project.Project
-import com.intellij.terminal.JBTerminalSystemSettingsProviderBase
-import com.intellij.terminal.JBTerminalWidget
+import com.intellij.openapi.util.Key
 import com.jediterm.terminal.*
 import com.jediterm.terminal.emulator.JediEmulator
 import com.jediterm.terminal.model.JediTerminal
+import com.pty4j.PtyProcess
+import org.apache.commons.io.input.buffer.CircularByteBuffer
+import org.jetbrains.plugins.terminal.JBTerminalSystemSettingsProvider
+import org.jetbrains.plugins.terminal.ShellTerminalWidget
 import java.io.InputStream
-import java.io.InputStreamReader
 import java.io.Reader
-import java.nio.charset.Charset
 import javax.swing.JComponent
 import kotlin.math.min
-import org.apache.commons.io.input.buffer.CircularByteBuffer
 
 private const val BUFFER_SIZE = 100000
 
-class JeditermConsoleView(project: Project, process: Process) : ConsoleView {
+class JeditermConsoleView(project: Project) : ConsoleView, AnsiEscapeDecoder.ColoredTextAcceptor {
 
-    private val widget: JBTerminalWidget
+    private val ansiEscapeDecoder = AnsiEscapeDecoder()
 
-    private val ttyConnector = LandoTtyConnector(process, this)
+    val termWidget: ShellTerminalWidget
 
-    private var emulator: CustomJeditermEmulator? = null
+    private var ttyConnector: LandoTtyConnector? = null
+
+    private var emulator: JediEmulator? = null
 
     private val bytesBuffer = CircularByteBuffer(BUFFER_SIZE)
     private val lock = Object()
@@ -43,7 +42,6 @@ class JeditermConsoleView(project: Project, process: Process) : ConsoleView {
 
     @Volatile
     var paused: Boolean = false
-
 
     private val bytesStream = object : InputStream() {
         override fun read(): Int {
@@ -73,9 +71,8 @@ class JeditermConsoleView(project: Project, process: Process) : ConsoleView {
         }
     }
 
-
     init {
-        widget = object : JBTerminalWidget(project, JBTerminalSystemSettingsProviderBase(), this) {
+        termWidget = object : ShellTerminalWidget(project, JBTerminalSystemSettingsProvider(), this) {
             override fun createTerminalStarter(terminal: JediTerminal, connector: TtyConnector): TerminalStarter =
                 object : TerminalStarter(
                     terminal, connector,
@@ -83,32 +80,35 @@ class JeditermConsoleView(project: Project, process: Process) : ConsoleView {
                     typeAheadManager, executorServiceManager
                 ) {
                     override fun createEmulator(dataStream: TerminalDataStream, terminal: Terminal): JediEmulator =
-                        CustomJeditermEmulator(dataStream, terminal).apply { emulator = this }
+                        JediEmulator(dataStream, terminal).apply { emulator = this }
                 }
         }
-        widget.start(ttyConnector)
-        //Disposer.register(this, connection)
     }
 
+    fun connectToProcess(process: PtyProcess) {
+        ttyConnector = LandoTtyConnector(process, this)
+        termWidget.start(ttyConnector)
+    }
 
     override fun dispose() {
+        ttyConnector?.close()
     }
 
-    override fun getComponent(): JComponent = widget
-    override fun getPreferredFocusableComponent(): JComponent = widget
+    override fun getComponent(): JComponent = termWidget
+    override fun getPreferredFocusableComponent(): JComponent = termWidget
 
     override fun print(text: String, contentType: ConsoleViewContentType) {
-        throw NotImplementedError("Not supported")
+        termWidget.terminal.writeCharacters(text)
     }
 
     override fun clear() {
-        widget.terminalTextBuffer.historyBuffer.clearAll()
-        widget.terminal.clearScreen()
-        widget.terminal.cursorPosition(0, 1)
+        termWidget.terminalTextBuffer.historyBuffer.clearAll()
+        termWidget.terminal.clearScreen()
+        termWidget.terminal.cursorPosition(0, 1)
     }
 
     override fun scrollTo(offset: Int) {
-        widget.terminal.setScrollingRegion(offset, Int.MAX_VALUE)
+        termWidget.terminal.setScrollingRegion(offset, Int.MAX_VALUE)
     }
 
     override fun attachToProcess(processHandler: ProcessHandler) {
@@ -140,7 +140,7 @@ class JeditermConsoleView(project: Project, process: Process) : ConsoleView {
     }
 
     override fun getContentSize(): Int =
-        with(widget.terminalTextBuffer) { screenLinesCount + widget.terminalTextBuffer.screenLinesCount }
+        with(termWidget.terminalTextBuffer) { screenLinesCount + termWidget.terminalTextBuffer.screenLinesCount }
 
     override fun canPause(): Boolean = true
 
@@ -156,19 +156,10 @@ class JeditermConsoleView(project: Project, process: Process) : ConsoleView {
                 val length = min(dataChunk.size, bytesBuffer.space)
                 if (length > 0) {
                     bytesBuffer.add(dataChunk, 0, length)
+                    addData(dataChunk.decodeToString(0, length), ProcessOutputTypes.STDOUT)
                     lock.notify()
                 }
             }
-        }
-    }
-
-    fun reconnect(charset: Charset, localEcho: Boolean) {
-        widget.terminal.setAutoNewLine(true) //todo LF mode is not supported due JediTerm limitations
-        ttyConnector.charset = charset
-        ttyConnector.localEcho = localEcho
-        synchronized(lock) {
-            bytesBuffer.clear()
-            bufferReader = InputStreamReader(bytesStream, charset)
         }
     }
 
@@ -187,27 +178,11 @@ class JeditermConsoleView(project: Project, process: Process) : ConsoleView {
         }
     }
 
-    val scrollToTheEndToolbarAction = object : ToggleAction(
-        ActionsBundle.messagePointer("action.EditorConsoleScrollToTheEnd.text"),
-        ActionsBundle.messagePointer("action.EditorConsoleScrollToTheEnd.text"),
-        AllIcons.RunConfigurations.Scroll_down
-    ) {
-        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
-
-        override fun isSelected(e: AnActionEvent): Boolean {
-            return widget.terminalPanel.verticalScrollModel.value == 0
-        }
-
-        override fun update(e: AnActionEvent) {
-            e.presentation.isEnabledAndVisible = widget.isShowing
-        }
-
-        override fun setSelected(e: AnActionEvent, state: Boolean) {
-            if (state) {
-                widget.terminalPanel.verticalScrollModel.value = 0
-            }
-        }
+    private fun addData(message: String, outputType: Key<*>) {
+        ansiEscapeDecoder.escapeText(message, outputType, this)
     }
 
-
+    override fun coloredTextAvailable(text: String, attributes: Key<*>) {
+        print(text, ConsoleViewContentType.getConsoleViewType(attributes))
+    }
 }
