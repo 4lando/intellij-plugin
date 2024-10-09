@@ -50,7 +50,7 @@ dependencies {
     }
 
     implementation("com.google.code.gson:gson:2.11.0")
-    implementation("org.jetbrains:annotations:25.0.0")
+    implementation("org.jetbrains:annotations:26.0.0")
 
     testImplementation("com.intellij.remoterobot:remote-robot:0.11.23")
 }
